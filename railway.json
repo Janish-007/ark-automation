@@ -1,0 +1,9 @@
+{
+  "build": {
+    "cmd": [
+      "pip install -r requirements.txt",
+      "playwright install chromium"
+    ]
+  },
+  "start": "bash start.sh"
+}
