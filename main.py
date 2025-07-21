@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime
 import time
 import gspread
+import os
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === ✅ Logging Setup ===
@@ -21,16 +23,26 @@ logging.getLogger().addHandler(console)
 
 # === ✅ Config ===
 GOOGLE_SHEET_NAME = "Ark Automation Testing - Updated"
-CREDENTIALS_FILE = "credentials(1).json"
 
-def read_google_sheet(sheet_name):
-    logging.info(f"📄 Reading Google Sheet: {sheet_name}")
+def get_gspread_client():
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if not creds_json:
+        raise Exception("Missing GOOGLE_CREDENTIALS_JSON env variable")
+    creds_dict = json.loads(creds_json)
+    with open("temp_creds.json", "w") as f:
+        json.dump(creds_dict, f)
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive"
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILE, scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("temp_creds.json", scope)
     client = gspread.authorize(creds)
+    os.remove("temp_creds.json")
+    return client
+
+def read_google_sheet(sheet_name):
+    logging.info(f"📄 Reading Google Sheet: {sheet_name}")
+    client = get_gspread_client()
     sheet = client.open(sheet_name).sheet1
     data = sheet.get_all_records()
     logging.info(f"✅ Sheet read successfully: {len(data)} rows.")
@@ -142,7 +154,7 @@ def main():
             else:
                 logging.info(f"⏩ Row {index+2}: Skipped (Submit != 'yes').")
     except Exception as e:
-        logging.exception(f"❌ Fatal error: {e}")
+        logging.exception(f"Fatal error: {e}")
 
 if __name__ == "__main__":
     main()
